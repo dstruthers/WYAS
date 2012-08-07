@@ -1,0 +1,9 @@
+WYAS ("Write Yourself A Scheme")
+
+This code is the result of reanding and working through Jonathan Tang's
+tutorial, "Write Yourself a Scheme in 48 Hours"
+
+http://en.wikibooks.org/wiki/Write_Yourself_a_Scheme_in_48_Hours
+
+Many thanks to Mr. Tang for putting this tutorial together. All code herein is
+licensed under the terms of the X11 license. See LICENSE for more information.
