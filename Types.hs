@@ -4,4 +4,5 @@ data LispVal = Atom String
              | DottedList [LispVal] LispVal
              | Number Integer
              | String String
+             | Char Char
              | Bool Bool

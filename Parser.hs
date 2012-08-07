@@ -1,5 +1,7 @@
 module Parser where
 import Control.Monad
+import Data.List (intercalate)
+import Numeric (readOct, readHex)
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Types
 
@@ -9,9 +11,19 @@ symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
 spaces :: Parser ()
 spaces = skipMany1 space
 
+escapedChar :: Parser Char
+escapedChar = do char '\\'
+                 x <- oneOf "\\\"nrt"
+                 return (translate x)
+  where translate c = case c of
+          'n' -> '\n'
+          'r' -> '\r'
+          't' -> '\t'
+          _   -> c
+
 parseString :: Parser LispVal
 parseString = do char '"'
-                 x <- many (noneOf "\"")
+                 x <- many (escapedChar <|> noneOf "\\\"")
                  char '"'
                  return $ String x
                  
@@ -25,7 +37,13 @@ parseAtom = do first <- letter <|> symbol
                  _    -> Atom atom
 
 parseNumber :: Parser LispVal
-parseNumber = liftM (Number . read) $ many1 digit
+parseNumber = do base <- try (char '#' >> oneOf "ox") <|> return 'd'
+                 case base of 
+                   'd' -> many1 digit >>= return . Number . read
+                   'o' -> many1 (oneOf "01234567") 
+                            >>= return . Number . fst . head . readOct
+                   'x' -> many1 (digit <|> oneOf "abcdefABCDEF")
+                            >>= return . Number . fst . head . readHex
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
