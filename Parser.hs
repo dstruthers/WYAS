@@ -74,6 +74,33 @@ parseNumber = do base <- try (char '#' >> oneOf "ox") <|> return 'd'
                               in fromBin' acc' cs
 
 
+parseList :: Parser LispVal
+parseList = liftM List $ parseExpr `sepBy` spaces
+
+parseDottedList :: Parser LispVal
+parseDottedList = do
+  head <- parseExpr `endBy` spaces
+  tail <- char '.' >> spaces >> parseExpr
+  return $ DottedList head tail  
+  
+parseQuote :: Parser LispVal
+parseQuote = do
+  char '\''
+  x <- parseExpr
+  return $ List [Atom "quote", x]
+
+parseQuasiQuote :: Parser LispVal
+parseQuasiQuote = do
+  char '`'
+  x <- parseExpr
+  return $ List [Atom "quasiquote", x]
+  
+parseUnquote :: Parser LispVal
+parseUnquote = do
+  char ','
+  x <- parseExpr
+  return $ List [Atom "unquote", x]
+
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
         <|> parseString
@@ -81,6 +108,13 @@ parseExpr = parseAtom
         <|> try parseNumber
         <|> try parseBool
         <|> try parseChar
+        <|> parseQuote
+        <|> parseQuasiQuote
+        <|> parseUnquote
+        <|> do char '('
+               x <- try parseList <|> parseDottedList
+               char ')'
+               return x
 
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
