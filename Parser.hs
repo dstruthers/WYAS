@@ -1,12 +1,12 @@
 module Parser where
 import Control.Monad
 import Data.List (intercalate)
-import Numeric (readOct, readHex)
+import Numeric (readOct, readHex, readFloat)
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Types
 
 symbol :: Parser Char
-symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
+symbol = oneOf "!$%&|*+-/:<=>?@^_~"
 
 spaces :: Parser ()
 spaces = skipMany1 space
@@ -27,28 +27,60 @@ parseString = do char '"'
                  char '"'
                  return $ String x
                  
+parseChar :: Parser LispVal
+parseChar = do string "#\\"
+               c <- (string "space" <|> string "newline" <|> singleChar)
+               return $ Char $ case c of
+                 "space"   -> ' '
+                 "newline" -> '\n'
+                 _         -> head c
+  where singleChar = do x <- anyChar
+                        notFollowedBy alphaNum
+                        return [x]
+
 parseAtom :: Parser LispVal
 parseAtom = do first <- letter <|> symbol
                rest <- many (letter <|> digit <|> symbol)
                let atom = first:rest
-               return $ case atom of
-                 "#t" -> Bool True
-                 "#f" -> Bool False
-                 _    -> Atom atom
+               return $ Atom atom
+
+parseBool :: Parser LispVal
+parseBool = do char '#'
+               b <- oneOf "tf"
+               return $ case b of
+                 't' -> Bool True
+                 'f' -> Bool False
+
+parseFloat :: Parser LispVal
+parseFloat = do n <- many1 digit
+                char '.'
+                dec <- many1 digit
+                return $ Float $ fromFloat $ n ++ "." ++ dec
+  where fromFloat = fst . head . readFloat
 
 parseNumber :: Parser LispVal
 parseNumber = do base <- try (char '#' >> oneOf "ox") <|> return 'd'
                  case base of 
+                   'b' -> many1 (oneOf "01") >>= return . Number . fromBin
                    'd' -> many1 digit >>= return . Number . read
-                   'o' -> many1 (oneOf "01234567") 
-                            >>= return . Number . fst . head . readOct
-                   'x' -> many1 (digit <|> oneOf "abcdefABCDEF")
-                            >>= return . Number . fst . head . readHex
+                   'o' -> many1 octDigit >>= return . Number . fromOct
+                   'x' -> many1 hexDigit >>= return . Number . fromHex
+  where fromOct = fst . head . readOct        
+        fromHex = fst . head . readHex
+        fromBin = fromBin' 0
+        fromBin' acc ""     = acc
+        fromBin' acc (c:cs) = let c' = if c == '1' then 1 else 0
+                                  acc' = 2 * acc + c'
+                              in fromBin' acc' cs
+
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
         <|> parseString
-        <|> parseNumber
+        <|> try parseFloat
+        <|> try parseNumber
+        <|> try parseBool
+        <|> try parseChar
 
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
