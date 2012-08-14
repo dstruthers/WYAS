@@ -75,7 +75,7 @@ parseNumber = do base <- try (char '#' >> oneOf "ox") <|> return 'd'
 
 
 parseList :: Parser LispVal
-parseList = liftM List $ parseExpr `sepBy` spaces
+parseList = liftM List $ parseExpr `sepEndBy` spaces
 
 parseDottedList :: Parser LispVal
 parseDottedList = do
@@ -116,7 +116,7 @@ parseExpr = parseAtom
                char ')'
                return x
 
-readExpr :: String -> String
+readExpr :: String -> LispVal
 readExpr input = case parse parseExpr "lisp" input of
-  Left err  -> "No match: " ++ show err
-  Right val -> "Found value"
+  Left err  -> String $ "No match: " ++ show err
+  Right val -> val

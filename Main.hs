@@ -1,7 +1,9 @@
 module Main where
+import Eval
 import Parser
 import System
+import Types
 
 main :: IO ()
-main = do args <- getArgs
-          putStrLn (readExpr (head args))
+main = getArgs >>= print . eval . readExpr . head
+
